@@ -4,8 +4,8 @@ from app.core.exceptions import NotOurImageFormatError
 from app.core.image.image import ImageData, PayloadMetadata, Encryption, Compression
 
 
-class BinaryImageSerializer:
-    FORMAT_ID = b'BIMG'
+class TextToImageSerializator:
+    FORMAT_ID = b'T2IF'
     FORMAT_ID_SIZE = 4
     DATA_SIZE_SIZE = 4
     FILENAME_LEN_SIZE = 2

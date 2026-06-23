@@ -5,14 +5,14 @@ from app.core.compression import CompressorFactory
 from app.core.crypto import CipherFactory
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
 from app.core.image.reader import RGBImageWriter, RGBImageReader
-from app.core.image.serializer import BinaryImageSerializer
+from app.core.image.serializers import TextToImageSerializator
 
 
 class PackTextToImageInteractor:
 
     def __init__(
             self,
-            serializer: BinaryImageSerializer,
+            serializer: TextToImageSerializator,
             writer: RGBImageWriter,
             cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory
@@ -63,7 +63,7 @@ class PackTextToImageInteractor:
 class UnpackImageToTextInteractor:
 
     def __init__(
-            self, serializer: BinaryImageSerializer, cipher_factory: CipherFactory,
+            self, serializer: TextToImageSerializator, cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory, reader: RGBImageReader
             ):
         self.serializer = serializer
