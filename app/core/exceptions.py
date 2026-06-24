@@ -4,3 +4,7 @@ class ApplicationException(Exception):
 
 class NotOurImageFormatError(Exception):
     pass
+
+
+class WrongPasswordError(Exception):
+    pass

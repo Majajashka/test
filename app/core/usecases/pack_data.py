@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 
 from app.core.compression import CompressorFactory
-from app.core.crypto import CipherFactory
+from app.core.crypto.cipher import CipherFactory
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
 from app.core.image.reader import RGBImageWriter, RGBImageReader
 from app.core.image.serializers import TextToImageSerializator

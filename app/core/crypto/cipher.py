@@ -1,11 +1,12 @@
 import os
 from typing import Protocol
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
-from cryptography.hazmat.primitives.ciphers.algorithms import AES
-from app.core.bytes_tool import ByteReader, ByteWriter
+from app.core.bytes_tool import ByteReader
 from itertools import cycle
 
+from app.core.exceptions import WrongPasswordError
 from app.core.image.image import Encryption
 
 
@@ -52,7 +53,13 @@ class ChaCha20Cipher(Cipher):
         ciphertext = byte_data.read_all()
 
         cipher = ChaCha20Poly1305(key)
-        return cipher.decrypt(nonce, ciphertext, associated_data=None)
+
+        try:
+            data = cipher.decrypt(nonce, ciphertext, associated_data=None)
+        except InvalidTag:
+            raise WrongPasswordError("Wrong password")
+
+        return data
 
 
 class XorCipher(Cipher):
