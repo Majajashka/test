@@ -10,6 +10,7 @@
 | **data_size**       |  `int`  |      4       | Payload size in bytes                    |
 | **compression**     |  `int`  |      1       | Compression alghorythm id                |
 | **encryption**      |  `int`  |      1       | Encryption alghorythm id                 |
+| **nonce**           | `bytes` |      12      | Nonce for encryption(if ChaCha20)        |
 | **payload**         | `bytes` |  data_size   | Binary data                              |
 
 # Compression

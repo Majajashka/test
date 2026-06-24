@@ -1,8 +1,8 @@
-import hashlib
 from pathlib import Path
 
 from app.core.compression import CompressorFactory
 from app.core.crypto.cipher import CipherFactory
+from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
 from app.core.image.reader import RGBImageWriter, RGBImageReader
 from app.core.image.serializers import TextToImageSerializator
@@ -15,12 +15,14 @@ class PackTextToImageInteractor:
             serializer: TextToImageSerializator,
             writer: RGBImageWriter,
             cipher_factory: CipherFactory,
-            compressor_factory: CompressorFactory
+            compressor_factory: CompressorFactory,
+            password_hasher: PasswordHasher
     ):
         self.serializer = serializer
         self.writer = writer
         self.cipher_factory = cipher_factory
         self.compressor_factory = compressor_factory
+        self.password_hasher = password_hasher
 
     def execute(
             self,
@@ -43,7 +45,7 @@ class PackTextToImageInteractor:
             cipher = self.cipher_factory.get_cipher(encryption)
             text_in_bytes = cipher.encrypt(
                 data=text_in_bytes,
-                key=hashlib.sha256(password.encode("utf-8")).digest()
+                key=self.password_hasher.hash(password)
             )
 
         image_data = self.serializer.serialize(
@@ -64,23 +66,29 @@ class UnpackImageToTextInteractor:
 
     def __init__(
             self, serializer: TextToImageSerializator, cipher_factory: CipherFactory,
-            compressor_factory: CompressorFactory, reader: RGBImageReader
+            compressor_factory: CompressorFactory, reader: RGBImageReader, password_hasher: PasswordHasher
             ):
         self.serializer = serializer
         self.cipher_factory = cipher_factory
         self.compressor_factory = compressor_factory
         self.reader = reader
+        self.password_hasher = password_hasher
 
     def execute(self, path_to_image: Path, password: str | None = None) -> str:
         raw_data = self.reader.read(path_to_image)
         image_data = self.serializer.deserialize(raw_data)
+
         if image_data.meta.encryption != Encryption.NONE:
+            if password is None:
+                raise ValueError("Password is required for decryption.")
             cipher = self.cipher_factory.get_cipher(image_data.meta.encryption)
             image_data = cipher.decrypt(
                 data=image_data.data,
-                key=hashlib.sha256(password.encode("utf-8")).digest()
+                key=self.password_hasher.hash(password)
             )
+
         if image_data.meta.compression != Compression.NONE:
             compressor = self.compressor_factory.get_compressor(image_data.meta.compression)
             image_data = compressor.decompress(image_data.data)
+
         return image_data.decode("utf-8")
