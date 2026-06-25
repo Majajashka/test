@@ -1,17 +1,36 @@
-## Binary Image Format
+# T2IF (RGB container)
 
-# Structure
+|                       |  Type   | Size (bytes) | Description                               |
+|:----------------------|:-------:|:------------:|:------------------------------------------|
+| **format_id**         | `bytes` |      4       | Signature `"T2IF"`                        |
+| **filename_length**   |  `int`  |      2       | File name length                          |
+| **filename**          |  `str`  | filename_len | File name in UTF-8 (if filename_len > 0)  |
+| **data_size**         |  `int`  |      4       | Payload size in bytes                     |
+| **compression**       |  `int`  |      1       | Compression algorithm id                  |
+| **encryption**        |  `int`  |      1       | Encryption algorithm id                   |
+| **payload**           | `bytes` |  data_size   | Binary data (nonce included for ChaCha20) |
 
-|                     |  Type   | Size (bytes) | Description                              |
-|:--------------------|:-------:|:------------:|:-----------------------------------------|
-| **format_id**       |  `str`  |      4       | Signature for format identification      |
-| **filename_length** |  `int`  |      1       | File name length                         |
-| **filename**        |  `str`  | filename_len | File name in UTF-8 (If filename_len > 0) |
-| **data_size**       |  `int`  |      4       | Payload size in bytes                    |
-| **compression**     |  `int`  |      1       | Compression alghorythm id                |
-| **encryption**      |  `int`  |      1       | Encryption alghorythm id                 |
-| **nonce**           | `bytes` |      12      | Nonce for encryption(if ChaCha20)        |
-| **payload**         | `bytes` |  data_size   | Binary data                              |
+# LSB (steganography)
+
+| Field             | Type    | Size | Description                               |
+|-------------------|---------|------|-------------------------------------------|
+| **format_id**     | `bytes` | 4    | Signature `"LSB1"`                        |
+| **channels_mask** | `int`   | 1    | Bitmask(RGB/A)                            |
+| **bits_r**        | `int`   | 1    | Bits per R channel                        |
+| **bits_g**        | `int`   | 1    | Bits per G channel                        |
+| **bits_b**        | `int`   | 1    | Bits per B channel                        |
+| **bits_a**        | `int`   | 1    | Bits per A channel (0 if rgb)             |
+| **data_size**     | `int`   | 4    | Payload size in bytes                     |
+| **compression**   | `int`   | 1    | Compression algorithm id                  |
+| **encryption**    | `int`   | 1    | Encryption algorithm id                   |
+| **payload**       | `bytes` | N    | Binary data (nonce included for ChaCha20) |
+
+# Packing algorithm
+
+| ID | Algorithm | Description       |
+|:--:|:---------:|:------------------|
+| 1  |    RGB    | Raw RGB container |
+| 2  |    LSB    | LSB steganography |
 
 # Compression
 
@@ -28,3 +47,10 @@
 | 0  |    None    | No encryption  |
 | 1  |    XOR     | XOR encryption |
 | 2  |  ChaCha20  | ChaCha20       |
+
+# Channels mask
+
+| ID | Alghorythm | Description |
+|:--:|:----------:|:------------|
+| 0  |    RGB     | RGB         |
+| 1  |    RGBA    | RGBA        |

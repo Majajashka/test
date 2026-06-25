@@ -4,7 +4,7 @@ from app.core.compression import CompressorFactory
 from app.core.crypto.cipher import CipherFactory
 from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
-from app.core.image.reader import RGBImageWriter, RGBImageReader
+from app.core.image.reader import ImageWriter, ImageReader
 from app.core.image.serializers import TextToImageSerializator
 
 
@@ -13,7 +13,7 @@ class PackTextToImageInteractor:
     def __init__(
             self,
             serializer: TextToImageSerializator,
-            writer: RGBImageWriter,
+            writer: ImageWriter,
             cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory,
             password_hasher: PasswordHasher
@@ -66,7 +66,7 @@ class UnpackImageToTextInteractor:
 
     def __init__(
             self, serializer: TextToImageSerializator, cipher_factory: CipherFactory,
-            compressor_factory: CompressorFactory, reader: RGBImageReader, password_hasher: PasswordHasher
+            compressor_factory: CompressorFactory, reader: ImageReader, password_hasher: PasswordHasher
             ):
         self.serializer = serializer
         self.cipher_factory = cipher_factory
@@ -75,7 +75,7 @@ class UnpackImageToTextInteractor:
         self.password_hasher = password_hasher
 
     def execute(self, path_to_image: Path, password: str | None = None) -> str:
-        raw_data = self.reader.read(path_to_image)
+        raw_data = self.reader.read_bytes(path_to_image)
         image_data = self.serializer.deserialize(raw_data)
 
         if image_data.meta.encryption != Encryption.NONE:

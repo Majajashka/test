@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum, IntFlag
 
 
 class Compression(Enum):
@@ -14,10 +14,38 @@ class Encryption(Enum):
     ChaCha20 = 2
 
 
+class PackingAlgorithm(IntEnum):
+    RGB = 1
+    LSB = 2
+
+
+class ChannelsMask(IntEnum):
+    RGB = 1
+    RGBA = 2
+
+
+@dataclass
+class LSBMetadata:
+    channels_mask: ChannelsMask
+    bits_r: int
+    bits_g: int
+    bits_b: int
+    bits_a: int
+    size: int
+    compression: Compression
+    encryption: Encryption
+
+
+@dataclass
+class LSBImageData:
+    meta: LSBMetadata
+    data: bytes
+
+
 @dataclass
 class PayloadMetadata:
-    size: int
     filename: str | None
+    size: int
     compression: Compression
     encryption: Encryption
 

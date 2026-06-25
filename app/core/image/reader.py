@@ -1,4 +1,5 @@
 import random
+from dataclasses import dataclass
 from itertools import batched
 
 from math import ceil
@@ -6,33 +7,67 @@ from pathlib import Path
 
 from PIL import Image
 
+from app.core.image.image import ChannelsMask
 
-class RGBImageReader:
 
-    def __init__(self, allowed_formats: list[str] = None):
-        if allowed_formats is None:
-            allowed_formats = []
+@dataclass
+class ImageMeta:
+    width: int
+    height: int
+    mode: ChannelsMask
 
-        self.allowed_formats = allowed_formats
 
-    def read(self, image_path: str | Path) -> bytes:
-        """reads image and returns list of pixels in RGB format (tuple of 3 int8)"""
+class ImageReader:
+    CHANNELS = {
+        "RGB": 3,
+        "RGBA": 4,
+    }
+
+    def __init__(
+            self,
+            mode: str = "RGB",
+            allowed_formats: list[str] | None = None,
+    ):
+        try:
+            self.channels = self.CHANNELS[mode]
+        except KeyError:
+            raise ValueError(f"Unsupported mode: {mode}")
+
+        self.mode = mode
+        self.allowed_formats = allowed_formats or ["PNG"]
+
+    def read_bytes(self, image_path: str | Path) -> bytes:
+        pixels = self.read_pixels(image_path)
+        return self._pixels_to_bytes(pixels)
+
+    def read_pixels(self, image_path: str | Path) -> list[tuple[int, ...], ...]:
         if isinstance(image_path, str):
             image_path = Path(image_path)
+
         if not image_path.exists():
-            raise FileNotFoundError(f"File {image_path} does not exist")
+            raise FileNotFoundError(
+                f"File {image_path} does not exist"
+            )
 
-        image = Image.open(image_path, 'r', formats=['PNG'])
+        with Image.open(
+                image_path,
+                formats=self.allowed_formats,
+        ) as image:
+            if image.mode != self.mode:
+                image = image.convert(self.mode)
 
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+            return image.get_flattened_data()
 
-        pixels = list(image.get_flattened_data())
-        image_bytes = self._pixels_to_bytes(pixels)
-        return image_bytes
+    def read_meta(self, image_path: str | Path) -> ImageMeta:
+        with Image.open(image_path) as image:
+            return ImageMeta(
+                width=image.width,
+                height=image.height,
+                mode=ChannelsMask(image.mode),
+            )
 
     @staticmethod
-    def _pixels_to_bytes(pixels: list[tuple[int, int, int]]) -> bytes:
+    def _pixels_to_bytes(pixels: list[tuple[int, ...], ...]) -> bytes:
         data = []
 
         for pixel in pixels:
@@ -41,58 +76,29 @@ class RGBImageReader:
         return bytes(data)
 
 
-class RGBImageWriter:
+class ImageWriter:
+    CHANNELS = {
+        "RGB": 3,
+        "RGBA": 4,
+    }
 
-    def __init__(
-            self,
-            allowed_formats: list[str] = None,
-            standard_sizes: list[tuple[int, int]] = None
-    ):
-        if allowed_formats is None:
-            allowed_formats = []
-        self.sizes = standard_sizes
-        self.allowed_formats = allowed_formats
+    def __init__(self, mode: str = "RGB"):
+        try:
+            self.mode = mode
+            self._channels = self.CHANNELS[mode]
+        except KeyError:
+            raise ValueError(f"Unsupported mode: {mode}")
 
-    def write(self, data: bytes, path: Path) -> None:
-        pixels_needed = ceil(len(data) / 3)
-        print(f"[INFO] Writing data: {len(data)} bytes, pixels needed: {pixels_needed}")
+    def write(self, data: bytes, width: int, height: int, path: Path) -> None:
+        if len(data) != width * height * self._channels:
+            raise ValueError("Data size does not match image dimensions")
+        image = Image.new(self.mode, (width, height))
+        image.putdata(tuple(batched(data, self._channels, strict=True)))
+        image.save(path)
 
-        ext = path.name.split('.')[-1]
-        if ext not in self.allowed_formats:
-            print(f"[ERROR] Invalid format: {ext}. Allowed: {self.allowed_formats}")
-            raise ValueError(f"Invalid file format {ext}")
+    @property
+    def channels(self) -> int:
+        return self._channels
 
-        for width, height in self.sizes:
-            capacity = width * height
-            print(f"[DEBUG] Checking size {width}x{height}, capacity={capacity}")
-
-            if pixels_needed <= capacity:
-                image = Image.new('RGB', (width, height))
-                print(f"[DEBUG] Image created")
-
-                data = self.pad_to_size(data, width, height)
-
-                image.putdata(self._bytes_to_pixels(data))
-                image.save(path)
-                print(f"[INFO] Success: Saved to {path}")
-                return
-        else:
-            print(f"[ERROR] Data too large for any standard size!")
-            raise ValueError(f"Image is too large for any of the standard sizes:\n {self.sizes}")
-
-    @staticmethod
-    def pad_to_size(data: bytes, width: int, height: int) -> bytes:
-        target_size = width * height * 3
-        bytes_to_add = target_size - len(data)
-
-        if bytes_to_add > 0:
-            random_bytes = random.randbytes(bytes_to_add)
-            data = data + random_bytes
-            print(f"[DEBUG] Padded with {bytes_to_add} random bytes")
-
-        return data
-
-    @staticmethod
-    def _bytes_to_pixels(data: bytes) -> tuple[tuple[int, int, int]]:
-        print(f"[DEBUG] Converting {len(data)} bytes to pixel tuples...")
-        return tuple(batched(data, 3, strict=True))
+    def _bytes_to_pixels(self, data: bytes) -> tuple[tuple[int, ...]]:
+        return tuple(batched(data, self._channels, strict=True))
