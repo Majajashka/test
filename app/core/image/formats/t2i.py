@@ -1,0 +1,14 @@
+class T2IFFormat:
+    FORMAT_ID = b"T2IF"
+
+    FORMAT_ID_SIZE = 4
+    DATA_SIZE_SIZE = 4
+    COMPRESSION_SIZE = 1
+    ENCRYPTION_SIZE = 1
+
+    HEADER_SIZE = (
+        FORMAT_ID_SIZE
+        + DATA_SIZE_SIZE
+        + COMPRESSION_SIZE
+        + ENCRYPTION_SIZE
+    )

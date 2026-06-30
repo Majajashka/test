@@ -1,25 +1,24 @@
 # T2IF (RGB container)
 
-|                       |  Type   | Size (bytes) | Description                               |
-|:----------------------|:-------:|:------------:|:------------------------------------------|
-| **format_id**         | `bytes` |      4       | Signature `"T2IF"`                        |
-| **filename_length**   |  `int`  |      2       | File name length                          |
-| **filename**          |  `str`  | filename_len | File name in UTF-8 (if filename_len > 0)  |
-| **data_size**         |  `int`  |      4       | Payload size in bytes                     |
-| **compression**       |  `int`  |      1       | Compression algorithm id                  |
-| **encryption**        |  `int`  |      1       | Encryption algorithm id                   |
-| **payload**           | `bytes` |  data_size   | Binary data (nonce included for ChaCha20) |
+|                     |  Type   | Size (bytes) | Description                               |
+|:--------------------|:-------:|:------------:|:------------------------------------------|
+| **format_id**       | `bytes` |      4       | Signature `"T2IF"`                        |
+| **filename_length** |  `int`  |      2       | File name length                          |
+| **filename**        |  `str`  | filename_len | File name in UTF-8 (if filename_len > 0)  |
+| **data_size**       |  `int`  |      4       | Payload size in bytes                     |
+| **compression**     |  `int`  |      1       | Compression algorithm id                  |
+| **encryption**      |  `int`  |      1       | Encryption algorithm id                   |
+| **payload**         | `bytes` |  data_size   | Binary data (nonce included for ChaCha20) |
 
 # LSB (steganography)
 
 | Field             | Type    | Size | Description                               |
 |-------------------|---------|------|-------------------------------------------|
 | **format_id**     | `bytes` | 4    | Signature `"LSB1"`                        |
-| **channels_mask** | `int`   | 1    | Bitmask(RGB/A)                            |
+| **channels_mask** | `int`   | 1    | Bitmask(RGB)                              |
 | **bits_r**        | `int`   | 1    | Bits per R channel                        |
 | **bits_g**        | `int`   | 1    | Bits per G channel                        |
 | **bits_b**        | `int`   | 1    | Bits per B channel                        |
-| **bits_a**        | `int`   | 1    | Bits per A channel (0 if rgb)             |
 | **data_size**     | `int`   | 4    | Payload size in bytes                     |
 | **compression**   | `int`   | 1    | Compression algorithm id                  |
 | **encryption**    | `int`   | 1    | Encryption algorithm id                   |
@@ -53,4 +52,3 @@
 | ID | Alghorythm | Description |
 |:--:|:----------:|:------------|
 | 0  |    RGB     | RGB         |
-| 1  |    RGBA    | RGBA        |

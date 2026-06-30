@@ -1,11 +1,8 @@
-import random
 from dataclasses import dataclass
-from itertools import batched
-
-from math import ceil
 from pathlib import Path
 
-from PIL import Image
+import cv2
+import numpy as np
 
 from app.core.image.image import ChannelsMask
 
@@ -18,87 +15,102 @@ class ImageMeta:
 
 
 class ImageReader:
-    CHANNELS = {
-        "RGB": 3,
-        "RGBA": 4,
-    }
 
     def __init__(
             self,
-            mode: str = "RGB",
+            mode: ChannelsMask = ChannelsMask.RGB,
             allowed_formats: list[str] | None = None,
     ):
-        try:
-            self.channels = self.CHANNELS[mode]
-        except KeyError:
-            raise ValueError(f"Unsupported mode: {mode}")
+        self._channels = 3  # currently only RGB is supported
 
         self.mode = mode
         self.allowed_formats = allowed_formats or ["PNG"]
 
     def read_bytes(self, image_path: str | Path) -> bytes:
-        pixels = self.read_pixels(image_path)
-        return self._pixels_to_bytes(pixels)
+        return self.read_pixels(image_path).tobytes()
 
-    def read_pixels(self, image_path: str | Path) -> list[tuple[int, ...], ...]:
-        if isinstance(image_path, str):
-            image_path = Path(image_path)
+    def read_pixels(self, image_path: str | Path) -> np.ndarray:
+        image_path = Path(image_path)
 
         if not image_path.exists():
             raise FileNotFoundError(
                 f"File {image_path} does not exist"
             )
 
-        with Image.open(
-                image_path,
-                formats=self.allowed_formats,
-        ) as image:
-            if image.mode != self.mode:
-                image = image.convert(self.mode)
+        self._check_format(image_path)
 
-            return image.get_flattened_data()
+        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+        if image is None:
+            raise ValueError(f"Failed to read image: {image_path}")
 
-    def read_meta(self, image_path: str | Path) -> ImageMeta:
-        with Image.open(image_path) as image:
-            return ImageMeta(
-                width=image.width,
-                height=image.height,
-                mode=ChannelsMask(image.mode),
-            )
+        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     @staticmethod
-    def _pixels_to_bytes(pixels: list[tuple[int, ...], ...]) -> bytes:
-        data = []
+    def read_meta(image_path: str | Path) -> ImageMeta:
+        image_path = Path(image_path)
 
-        for pixel in pixels:
-            data.extend(pixel)
+        if not image_path.exists():
+            raise FileNotFoundError(
+                f"File {image_path} does not exist"
+            )
 
-        return bytes(data)
+        image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+        if image is None:
+            raise ValueError(f"Failed to read image: {image_path}")
+
+        height, width, _ = image.shape  # height, width, channels
+        return ImageMeta(
+            width=width,
+            height=height,
+            mode=ChannelsMask.RGB,
+        )
+    @staticmethod
+    def read_meta_from_pixels(pixels: np.ndarray) -> ImageMeta:
+        height, width, _ = pixels.shape  # height, width, channels
+        return ImageMeta(
+            width=width,
+            height=height,
+            mode=ChannelsMask.RGB,
+        )
+
+    def _check_format(self, image_path: Path) -> None:
+        suffix = image_path.suffix.lstrip(".").upper()
+        if suffix not in self.allowed_formats:
+            raise ValueError(
+                f"Format {suffix or 'unknown'} is not allowed. "
+                f"Allowed: {', '.join(self.allowed_formats)}"
+            )
 
 
 class ImageWriter:
-    CHANNELS = {
-        "RGB": 3,
-        "RGBA": 4,
-    }
 
-    def __init__(self, mode: str = "RGB"):
-        try:
-            self.mode = mode
-            self._channels = self.CHANNELS[mode]
-        except KeyError:
-            raise ValueError(f"Unsupported mode: {mode}")
+    def __init__(self, mode: ChannelsMask = ChannelsMask.RGB):
+        self.mode = mode
+        self._channels = 3  # currently only RGB is supported
 
-    def write(self, data: bytes, width: int, height: int, path: Path) -> None:
+    def write_raw(self, data: bytes, width: int, height: int, path: Path) -> None:
         if len(data) != width * height * self._channels:
             raise ValueError("Data size does not match image dimensions")
-        image = Image.new(self.mode, (width, height))
-        image.putdata(tuple(batched(data, self._channels, strict=True)))
-        image.save(path)
 
-    @property
-    def channels(self) -> int:
-        return self._channels
+        pixels = np.frombuffer(data, dtype=np.uint8).reshape(height, width, self._channels)
+        self.write_pixels(pixels, width, height, path)
 
-    def _bytes_to_pixels(self, data: bytes) -> tuple[tuple[int, ...]]:
-        return tuple(batched(data, self._channels, strict=True))
+    def write_pixels(
+            self, data: np.ndarray, width: int, height: int, path: Path
+    ) -> None:
+        pixels = np.asarray(data, dtype=np.uint8)
+
+        if pixels.size != width * height * self._channels:
+            raise ValueError("Data size does not match image dimensions")
+
+        if pixels.ndim == 1:
+            pixels = pixels.reshape(height, width, self._channels)
+        elif pixels.shape != (height, width, self._channels):
+            raise ValueError("Data size does not match image dimensions")
+
+        bgr = cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR)
+        suffix = path.suffix.lower() or ".png"
+        success, encoded = cv2.imencode(suffix, bgr)
+        if not success:
+            raise ValueError(f"Failed to write image: {path}")
+        path.write_bytes(encoded.tobytes())

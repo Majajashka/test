@@ -14,14 +14,8 @@ class Encryption(Enum):
     ChaCha20 = 2
 
 
-class PackingAlgorithm(IntEnum):
-    RGB = 1
-    LSB = 2
-
-
 class ChannelsMask(IntEnum):
     RGB = 1
-    RGBA = 2
 
 
 @dataclass
@@ -30,7 +24,6 @@ class LSBMetadata:
     bits_r: int
     bits_g: int
     bits_b: int
-    bits_a: int
     size: int
     compression: Compression
     encryption: Encryption
@@ -44,7 +37,6 @@ class LSBImageData:
 
 @dataclass
 class PayloadMetadata:
-    filename: str | None
     size: int
     compression: Compression
     encryption: Encryption
