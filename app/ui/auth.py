@@ -9,6 +9,7 @@ from app.database.exceptions import DuplicateUsernameError, InvalidCredentialsEr
 from app.database.transaction_manager import TransactionManager
 from app.database.user_repository import Language, User, UserRepository
 from app.ui.locale import current_language, tr
+from app.ui.services import create_user_interactor, get_user_auth_interactor
 
 
 class AuthWindow(QWidget):
@@ -16,9 +17,6 @@ class AuthWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        repo = UserRepository()
-        self._register = CreateUserInteractor(repo, TransactionManager(...))
-        self._login = AuthenticateUserInteractor(repo, TransactionManager(...))
         self._build()
 
     def _build(self):
@@ -164,7 +162,8 @@ class AuthWindow(QWidget):
             QMessageBox.warning(self, tr("Sign in"), tr("Fill in username and password."))
             return
         try:
-            account: User = self._login.execute(user, pwd)
+            interactor = get_user_auth_interactor()
+            account: User = interactor.execute(user, pwd)
             self.logged_in.emit(account)
         except InvalidCredentialsError:
             QMessageBox.warning(self, tr("Sign in"), tr("Invalid username or password."))
@@ -182,7 +181,8 @@ class AuthWindow(QWidget):
             QMessageBox.warning(self, tr("Register"), tr("Passwords do not match."))
             return
         try:
-            self._register.execute(user, pwd, current_language())
+            interactor = create_user_interactor()
+            user = interactor.execute(user, pwd, current_language())
             QMessageBox.information(self, tr("Register"), tr("Account created. Please sign in."))
             self.login_user.setText(user)
             self.login_pass.clear()

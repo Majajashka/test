@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -64,6 +65,7 @@ class ImageReader:
             height=height,
             mode=ChannelsMask.RGB,
         )
+
     @staticmethod
     def read_meta_from_pixels(pixels: np.ndarray) -> ImageMeta:
         height, width, _ = pixels.shape  # height, width, channels
@@ -82,22 +84,30 @@ class ImageReader:
             )
 
 
+@dataclass
+class WriteResult:
+    size: int
+    sha256: str
+    width: int
+    height: int
+
+
 class ImageWriter:
 
     def __init__(self, mode: ChannelsMask = ChannelsMask.RGB):
         self.mode = mode
         self._channels = 3  # currently only RGB is supported
 
-    def write_raw(self, data: bytes, width: int, height: int, path: Path) -> None:
+    def write_raw(self, data: bytes, width: int, height: int, path: Path) -> WriteResult:
         if len(data) != width * height * self._channels:
             raise ValueError("Data size does not match image dimensions")
 
         pixels = np.frombuffer(data, dtype=np.uint8).reshape(height, width, self._channels)
-        self.write_pixels(pixels, width, height, path)
+        return self.write_pixels(pixels, width, height, path)
 
     def write_pixels(
             self, data: np.ndarray, width: int, height: int, path: Path
-    ) -> None:
+    ) -> WriteResult:
         pixels = np.asarray(data, dtype=np.uint8)
 
         if pixels.size != width * height * self._channels:
@@ -113,4 +123,12 @@ class ImageWriter:
         success, encoded = cv2.imencode(suffix, bgr)
         if not success:
             raise ValueError(f"Failed to write image: {path}")
-        path.write_bytes(encoded.tobytes())
+        file_bytes = encoded.tobytes()
+        path.write_bytes(file_bytes)
+
+        return WriteResult(
+            size=len(file_bytes),
+            sha256=hashlib.sha256(file_bytes).hexdigest(),
+            width=width,
+            height=height
+        )

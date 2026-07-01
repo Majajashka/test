@@ -11,7 +11,6 @@ class Image:
     owner_user_id: int
     source_image_id: Optional[int]
     file_path: str
-    original_name: Optional[str]
     image_format: str
     channels_mask: Optional[str]
     width_px: Optional[int]
@@ -28,7 +27,6 @@ class Image:
             owner_user_id=row["owner_user_id"],
             source_image_id=row["source_image_id"],
             file_path=row["file_path"],
-            original_name=row["original_name"],
             image_format=row["image_format"],
             channels_mask=row["channels_mask"],
             width_px=row["width_px"],

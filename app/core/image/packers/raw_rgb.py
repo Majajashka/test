@@ -2,7 +2,7 @@ import random
 from math import ceil
 from pathlib import Path
 
-from app.core.image.reader import ImageWriter, ImageReader
+from app.core.image.reader import ImageWriter, ImageReader, WriteResult
 
 
 class RGBImagePacker:
@@ -23,7 +23,7 @@ class RGBImagePacker:
         ]
         self.image_writer = writer
 
-    def pack(self, data: bytes, output_path: Path) -> None:
+    def pack(self, data: bytes, output_path: Path) -> WriteResult:
         pixels_needed = ceil(len(data) / 3)
 
         for width, height in self.standard_sizes:
@@ -32,9 +32,9 @@ class RGBImagePacker:
 
             if pixels_needed <= capacity:
                 data = self.pad_to_size(data, width, height)
-                self.image_writer.write_raw(data, width, height, output_path)
+                result = self.image_writer.write_raw(data, width, height, output_path)
                 print(f"[DEBUG] Successfully packed {len(data)} bytes to {output_path}")
-                return
+                return result
 
         raise ValueError(
             f"Data is too large ({len(data)} bytes)"

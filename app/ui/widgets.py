@@ -1,3 +1,5 @@
+import time
+
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QPushButton, QFileDialog,
     QGroupBox, QFormLayout, QComboBox, QLabel, QMessageBox,
@@ -112,16 +114,19 @@ class PackSettings(QGroupBox):
 
     def values(self):
         enc = self.encryption.currentData()
+        password = self.password.text()
+        if not password:
+            password = None
         return {
             "compression": Compression(self.compression.currentData()),
             "encryption": Encryption(enc),
-            "password": self.password.text() if enc != Encryption.NONE else None,
+            "password": password,
         }
 
 
 class Worker(QObject):
-    finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    finished = pyqtSignal(object, float)
+    error = pyqtSignal(str, float)
 
     def __init__(self, func, *args, **kwargs):
         super().__init__()
@@ -131,12 +136,15 @@ class Worker(QObject):
 
     @pyqtSlot()
     def run(self):
+        start = time.perf_counter()
         try:
             result = self.func(*self.args, **self.kwargs)
-            self.finished.emit(result)
+            duration_ms = (time.perf_counter() - start) * 1000
+            self.finished.emit(result, duration_ms)
         except Exception as e:
             print(f"[DEBUG] [WorkerThread] Error: {e}")
-            self.error.emit(str(e))
+            duration_ms = (time.perf_counter() - start) * 1000
+            self.error.emit(str(e), duration_ms)
 
 
 class WorkerMixin:

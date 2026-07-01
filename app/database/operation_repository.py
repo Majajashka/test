@@ -8,8 +8,6 @@ class Operation:
     id: int
     user_id: int
     operation_type: str
-    image_id: int
-    payload_id: Optional[int]
     status: str
     error_message: Optional[str]
     duration_ms: Optional[int]
@@ -21,8 +19,6 @@ class Operation:
             id=row["id"],
             user_id=row["user_id"],
             operation_type=row["operation_type"],
-            image_id=row["image_id"],
-            payload_id=row["payload_id"],
             status=row["status"],
             error_message=row["error_message"],
             duration_ms=row["duration_ms"],
@@ -35,25 +31,23 @@ class OperationRepository:
         self.connection = connection
 
     def log_operation(
-        self,
-        user_id: int,
-        operation_type: str,
-        image_id: int,
-        status: str,
-        payload_id: Optional[int] = None,
-        error_message: Optional[str] = None,
-        duration_ms: Optional[int] = None,
+            self,
+            user_id: int,
+            operation_type: str,
+            status: str,
+            error_message: Optional[str] = None,
+            duration_ms: Optional[int] = None,
     ) -> int:
         cur = self.connection.cursor()
         cur.execute(
             """
             INSERT INTO operations (
-                user_id, operation_type, image_id, payload_id,
+                user_id, operation_type,
                 status, error_message, duration_ms
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
             """,
             (
-                user_id, operation_type, image_id, payload_id,
+                user_id, operation_type,
                 status, error_message, duration_ms,
             ),
         )

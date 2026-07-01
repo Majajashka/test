@@ -4,7 +4,7 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Optional
 
 from app.database.exceptions import DuplicateUsernameError, InvalidCredentialsError, \
@@ -13,7 +13,7 @@ from app.database.exceptions import DuplicateUsernameError, InvalidCredentialsEr
 PBKDF2_ITERATIONS = 200_000
 
 
-class Language(Enum):
+class Language(StrEnum):
     EN = "en"
     RU = "ru"
     KA = "ka"
@@ -39,7 +39,7 @@ class User:
             password_hash=row["password_hash"],
             password_algo=row["password_algo"],
             password_salt=row["password_salt"],
-            preferred_lang_code=row["preferred_lang_code"],
+            preferred_lang_code=Language(row["preferred_lang_code"]),
             is_active=bool(row["is_active"]),
             created_at=row["created_at"],
             last_login_at=row["last_login_at"],
@@ -100,3 +100,11 @@ class UserRepository:
         now = datetime.now(timezone.utc).isoformat(sep=" ", timespec="seconds")
         cur = self.connection.cursor()
         cur.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now, user_id))
+
+    def change_language(self, user_id: int, language: Language) -> Language:
+        cur = self.connection.cursor()
+        cur.execute(
+            "UPDATE users SET preferred_lang_code = ? WHERE id = ?",
+            (language.value, user_id)
+        )
+        return language

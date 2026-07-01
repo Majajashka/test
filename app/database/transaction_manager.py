@@ -21,4 +21,3 @@ class TransactionManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self._committed:
             self.conn.rollback()
-        self.conn.close()

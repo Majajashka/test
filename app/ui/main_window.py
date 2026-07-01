@@ -124,6 +124,10 @@ class MainWindow(QMainWindow):
         self._user = user
         self.user_info.setText(f"<span>User:</span> <strong>{user.username}</strong>")
         self.page_settings.set_user(user)
+        self.page_text_decode.set_user(user)
+        self.page_text_encode.set_user(user)
+        self.page_stego_decode.set_user(user)
+        self.page_stego_encode.set_user(user)
         self._apply_language(user.preferred_lang_code)
         self.stack.setCurrentIndex(1)
         self._go(0)

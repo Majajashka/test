@@ -10,11 +10,17 @@ from app.core.image.packers.raw_rgb import RGBImagePacker, RGBImageUnpacker
 from app.core.image.reader import ImageWriter, ImageReader
 from app.core.image.serializers import TextToImageSerializator
 from app.core.usecases.pack_data import PackTextToImageInteractor, UnpackImageToTextInteractor
+from app.database.connection import get_connection
+from app.database.image_repository import ImageRepository
+from app.database.transaction_manager import TransactionManager
 
 
 @pytest.fixture
 def pack_interactor() -> PackTextToImageInteractor:
+    conn = get_connection()
     return PackTextToImageInteractor(
+        image_repo=ImageRepository(conn),
+        transaction_manager=TransactionManager(conn),
         rgb_packer=RGBImagePacker(
             writer=ImageWriter(),
         ),
@@ -61,6 +67,7 @@ def test_pack_data(
     path_to_save = tmp_path / "output.png"
 
     pack_interactor.execute(
+        user_id=1,
         text=text,
         path_to_save=tmp_path / "output.png",
         compression=compression,
@@ -68,7 +75,8 @@ def test_pack_data(
         password=password
     )
 
-    unpacked_text = unpack_interactor.execute(path_to_image=path_to_save, password=password)
+    unpacked_text = unpack_interactor.execute(user_id=1,path_to_image=path_to_save,
+                                              password=password)
 
     assert text == unpacked_text
 
@@ -83,6 +91,7 @@ def test_edge_texts(
     path = tmp_path / "out.png"
 
     pack_interactor.execute(
+        user_id=1,
         text=text,
         path_to_save=path,
         compression=Compression.NONE,
@@ -90,6 +99,6 @@ def test_edge_texts(
         password=None,
     )
 
-    result = unpack_interactor.execute(path)
+    result = unpack_interactor.execute(path_to_image=path)
 
     assert result == text

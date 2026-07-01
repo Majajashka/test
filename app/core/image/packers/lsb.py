@@ -6,7 +6,7 @@ from pathlib import Path
 from app.core.bytes_tool import BitReader, set_low_bits, BitBuffer
 from app.core.image.formats.lsb import LSBFormat
 from app.core.image.image import LSBMetadata
-from app.core.image.reader import ImageReader, ImageWriter, ImageMeta
+from app.core.image.reader import ImageReader, ImageWriter, ImageMeta, WriteResult
 from app.core.image.serializers import LSBSerializer
 
 
@@ -15,6 +15,7 @@ class LSBConfig:
     red_bits: int = 1
     green_bits: int = 1
     blue_bits: int = 1
+
 
 
 class LSBImagePacker:
@@ -29,7 +30,7 @@ class LSBImagePacker:
             data: bytes,
             source_image_path: Path,
             output_path: Path
-    ) -> None:
+    ) -> WriteResult:
         source_image_pixels = self.image_reader.read_pixels(source_image_path)
         source_image_meta = self.image_reader.read_meta_from_pixels(source_image_pixels)
         flat_pixels = source_image_pixels.reshape(-1, 3)
@@ -63,13 +64,14 @@ class LSBImagePacker:
                 break
             flat_pixels[i] = self.write_in_rgb_pixel(tuple(flat_pixels[i]), bit_reader)
 
-        self.image_writer.write_pixels(
+        result = self.image_writer.write_pixels(
             data=source_image_pixels,
             width=source_image_meta.width,
             height=source_image_meta.height,
             path=output_path
         )
         print(f"[DEBUG] Successfully packed {len(data)} bytes to {output_path}")
+        return result
 
     @staticmethod
     def _bootstrap_config() -> LSBConfig:

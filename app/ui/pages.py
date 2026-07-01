@@ -6,6 +6,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
+from app.database.connection import get_connection
+from app.database.operation_repository import OperationRepository
+from app.database.transaction_manager import TransactionManager
 from app.database.user_repository import Language, User, UserRepository
 from app.ui.locale import tr
 from app.ui.services import rgb_pack_interactor, rgb_unpack_interactor, lsb_pack_interactor, \
@@ -57,7 +60,7 @@ class TextToImagePage(QWidget, WorkerMixin):
         btn_layout.addWidget(self.btn)
         self.btn.setFixedWidth(160)
         lay.addLayout(btn_layout)
-
+        self.user = None
         self.retranslate()
 
     def retranslate(self):
@@ -82,24 +85,45 @@ class TextToImagePage(QWidget, WorkerMixin):
 
         self.btn.setEnabled(False)
         opts = self.settings.values()
+        print(opts)
 
         self._current_thread = self.run_async(
             func=rgb_pack_interactor().execute,
-            on_success=lambda result: self._on_success(path),
+            on_success=lambda result, duration: self._on_success(path, duration),
             on_error=self._on_error,
+            user_id=self.user.id,
             text=text,
             path_to_save=Path(path),
             **opts
         )
 
-    def _on_success(self, path):
+    def _on_success(self, path, duration):
         self.btn.setEnabled(True)
-        message = tr("Saved: %1").replace("%1", path)
+        message = tr("Saved: %1 (%2 ms)")
+        message = message.replace("%1", path).replace("%2", str(int(duration)))
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EMBED", "SUCCESS", duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.information(self, tr("Success"), message)
 
-    def _on_error(self, error_msg):
+    def _on_error(self, error_msg, duration):
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EMBED", "FAILED", duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.critical(self, tr("Error"), error_msg)
+
+    def set_user(self, user: User):
+        self.user = user
 
 
 class ImageToTextPage(QWidget, WorkerMixin):
@@ -150,7 +174,7 @@ class ImageToTextPage(QWidget, WorkerMixin):
         lay.addWidget(self.lbl_result)
         lay.addWidget(self.result)
         lay.addStretch()
-
+        self.user = None
         self.retranslate()
 
     def retranslate(self):
@@ -173,6 +197,7 @@ class ImageToTextPage(QWidget, WorkerMixin):
             return
 
         pwd = self.password.text() or None
+        print(pwd)
         interactor = rgb_unpack_interactor()
 
         def job():
@@ -184,15 +209,32 @@ class ImageToTextPage(QWidget, WorkerMixin):
             on_error=self._on_error
         )
 
-    def _on_success(self, result):
+    def _on_success(self, result, duration):
         print(result)
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EXTRACT", "SUCCESS", duration_ms=duration
+            )
+            tm.commit()
         self.result.setPlainText(str(result))
 
-    def _on_error(self, error_msg):
+    def _on_error(self, error_msg, duration):
         print(error_msg)
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EXTRACT", "FAILED", error_message=error_msg, duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.critical(self, tr("Error"), error_msg)
+
+    def set_user(self, user: User):
+        self.user = user
 
 
 class StegoEncodePage(QWidget, WorkerMixin):
@@ -244,7 +286,7 @@ class StegoEncodePage(QWidget, WorkerMixin):
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn)
         lay.addLayout(btn_layout)
-
+        self.user = None
         self.retranslate()
 
     def retranslate(self):
@@ -293,13 +335,31 @@ class StegoEncodePage(QWidget, WorkerMixin):
             on_error=self._on_error
         )
 
-    def _on_success(self, message):
+    def _on_success(self, message, duration):
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EMBED", "SUCCESS", duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.information(self, tr("Done"), message)
 
-    def _on_error(self, error_msg):
+    def _on_error(self, error_msg, duration):
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+
+            operation_repo.log_operation(
+                self.user.id, "EMBED", "FAILED", error_message=error_msg, duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.critical(self, tr("Error"), error_msg)
+
+    def set_user(self, user: User):
+        self.user = user
 
 
 class StegoDecodePage(QWidget, WorkerMixin):
@@ -350,7 +410,7 @@ class StegoDecodePage(QWidget, WorkerMixin):
         lay.addWidget(self.lbl_result)
         lay.addWidget(self.result)
         lay.addStretch()
-
+        self.user = None
         self.retranslate()
 
     def retranslate(self):
@@ -373,7 +433,7 @@ class StegoDecodePage(QWidget, WorkerMixin):
             return
 
         pwd = self.password.text() or None
-
+        print(pwd)
         self.btn.setEnabled(False)
 
         def job():
@@ -386,13 +446,31 @@ class StegoDecodePage(QWidget, WorkerMixin):
             on_error=self._on_error
         )
 
-    def _on_success(self, text):
+    def _on_success(self, text, duration):
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+            operation_repo.log_operation(
+                self.user.id, "EXTRACT", "SUCCESS", duration_ms=duration
+            )
+            tm.commit()
         self.result.setPlainText(text)
 
-    def _on_error(self, error_msg):
+    def _on_error(self, error_msg, duration):
         self.btn.setEnabled(True)
+        conn = get_connection()
+        with TransactionManager(conn) as tm:
+            operation_repo = OperationRepository(conn)
+
+            operation_repo.log_operation(
+                self.user.id, "EMBED", "FAILED", error_message=error_msg, duration_ms=duration
+            )
+            tm.commit()
         QMessageBox.critical(self, tr("Error"), error_msg)
+
+    def set_user(self, user: User):
+        self.user = user
 
 
 class SettingsPage(QWidget):
@@ -440,7 +518,6 @@ class SettingsPage(QWidget):
         btn_layout.addStretch()
         btn_layout.addWidget(self.btn)
         lay.addLayout(btn_layout)
-
         self.retranslate()
 
     def retranslate(self):
@@ -464,7 +541,10 @@ class SettingsPage(QWidget):
             return
         lang = self.lang.currentData()
         try:
-            UserRepository().change_language(self._user.id, lang)
+            conn = get_connection()
+            with TransactionManager(conn) as tm:
+                UserRepository(conn).change_language(self._user.id, lang)
+                tm.commit()
             self._user.preferred_lang_code = lang
             self.language_changed.emit()
             QMessageBox.information(self, tr("Settings"), tr("Saved."))

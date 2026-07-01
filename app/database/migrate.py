@@ -7,8 +7,8 @@ BASE_DIR = Path(__file__).parent
 SCHEMA_FILES = [
     "schema_01_users.sql",
     "schema_02_images.sql",
-    "schema_03_payloads.sql",
-    "schema_04_operations.sql",
+    "schema_03_operations.sql",
+
 ]
 
 SEED_FILE = "seed_data.sql"

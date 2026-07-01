@@ -2,8 +2,6 @@ CREATE TABLE operations (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     operation_type  TEXT NOT NULL CHECK (operation_type IN ('EMBED', 'EXTRACT')),
-    image_id        INTEGER NOT NULL REFERENCES images(id) ON DELETE CASCADE,
-    payload_id      INTEGER REFERENCES payloads(id) ON DELETE SET NULL,
     status          TEXT NOT NULL CHECK (status IN ('SUCCESS', 'FAILED')),
     error_message   TEXT,
     duration_ms     INTEGER,
@@ -11,5 +9,4 @@ CREATE TABLE operations (
 );
 
 CREATE INDEX idx_operations_user    ON operations(user_id);
-CREATE INDEX idx_operations_image   ON operations(image_id);
 CREATE INDEX idx_operations_created ON operations(created_at);

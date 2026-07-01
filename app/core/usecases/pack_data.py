@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.compression import CompressorFactory
@@ -6,18 +7,30 @@ from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
 from app.core.image.packers.raw_rgb import RGBImagePacker, RGBImageUnpacker
 from app.core.image.serializers import TextToImageSerializator
+from app.database.image_repository import ImageRepository
+from app.database.transaction_manager import TransactionManager
+
+
+@dataclass
+class PackDataResult:
+    image_id: int
+    user_id: int
 
 
 class PackTextToImageInteractor:
 
     def __init__(
             self,
+            image_repo: ImageRepository,
+            transaction_manager: TransactionManager,
             rgb_packer: RGBImagePacker,
             serializer: TextToImageSerializator,
             cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory,
             password_hasher: PasswordHasher
     ):
+        self.image_repo = image_repo
+        self.transaction_manager = transaction_manager
         self.packer = rgb_packer
         self.serializer = serializer
         self.cipher_factory = cipher_factory
@@ -30,8 +43,9 @@ class PackTextToImageInteractor:
             path_to_save: Path,
             compression: Compression,
             encryption: Encryption,
+            user_id: int,
             password: str | None = None
-    ) -> None:
+    ) -> PackDataResult:
         if password is None and encryption != Encryption.NONE:
             raise ValueError("Password is required for encryption.")
 
@@ -48,7 +62,7 @@ class PackTextToImageInteractor:
                 key=self.password_hasher.hash(password)
             )
 
-        image_data = self.serializer.serialize(
+        serialized_data = self.serializer.serialize(
             image_data=ImageData(
                 meta=PayloadMetadata(
                     size=len(text_in_bytes),
@@ -58,7 +72,22 @@ class PackTextToImageInteractor:
                 data=text_in_bytes
             )
         )
-        self.packer.pack(image_data, path_to_save)
+        result = self.packer.pack(serialized_data, path_to_save)
+        with self.transaction_manager:
+            img_id = self.image_repo.create_image(
+                owner_user_id=user_id,
+                file_path=str(path_to_save),
+                image_format="PNG",
+                file_size_bytes=result.size,
+                sha256_hash=result.sha256,
+                width_px=result.width,
+                height_px=result.height,
+                is_stego=False
+            )
+
+            self.transaction_manager.commit()
+
+        return PackDataResult(image_id=img_id, user_id=user_id)
 
 
 class UnpackImageToTextInteractor:

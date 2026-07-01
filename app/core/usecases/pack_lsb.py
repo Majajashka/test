@@ -6,18 +6,24 @@ from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, LSBImageData, LSBMetadata
 from app.core.image.packers.lsb import LSBImagePacker, LSBImageUnpacker
 from app.core.image.serializers import LSBSerializer
+from app.database.image_repository import ImageRepository
+from app.database.transaction_manager import TransactionManager
 
 
 class PackTextToLSBImageInteractor:
 
     def __init__(
             self,
+            image_repo: ImageRepository,
+            transaction_manager: TransactionManager,
             serializer: LSBSerializer,
             packer: LSBImagePacker,
             cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory,
             password_hasher: PasswordHasher,
     ):
+        self.image_repo = image_repo
+        self.transaction_manager = transaction_manager
         self.serializer = serializer
         self.packer = packer
         self.cipher_factory = cipher_factory
@@ -31,6 +37,7 @@ class PackTextToLSBImageInteractor:
             path_to_save: Path,
             compression: Compression,
             encryption: Encryption,
+            user_id: int,
             password: str | None = None,
     ) -> None:
         if password is None and encryption != Encryption.NONE:
@@ -65,7 +72,31 @@ class PackTextToLSBImageInteractor:
             )
         )
 
-        self.packer.pack(data=serialized, source_image_path=source_path, output_path=path_to_save)
+        result = self.packer.pack(
+            data=serialized, source_image_path=source_path,
+            output_path=path_to_save)
+        with self.transaction_manager as tm:
+            source_img_id = self.image_repo.create_image(
+                owner_user_id=user_id,
+                file_path=str(source_path),
+                image_format="PNG",
+                file_size_bytes=result.size,
+                sha256_hash=result.sha256,
+                width_px=result.width,
+                height_px=result.height
+            )
+            self.image_repo.create_image(
+                owner_user_id=user_id,
+                file_path=str(path_to_save),
+                image_format="PNG",
+                file_size_bytes=result.size,
+                sha256_hash=result.sha256,
+                width_px=result.width,
+                height_px=result.height,
+                is_stego=True,
+                source_image_id=source_img_id
+            )
+            tm.commit()
 
 
 class UnpackLSBImageToTextInteractor:
