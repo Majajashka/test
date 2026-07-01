@@ -2,11 +2,13 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPlainTextEdit, QPushButton,
-    QFormLayout, QComboBox, QMessageBox, QLineEdit, QHBoxLayout
+    QFormLayout, QComboBox, QMessageBox, QLineEdit, QHBoxLayout, QTableWidgetItem, QHeaderView,
+    QTableWidget, QTabWidget
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
 from app.database.connection import get_connection
+from app.database.image_repository import ImageRepository, Image
 from app.database.operation_repository import OperationRepository
 from app.database.transaction_manager import TransactionManager
 from app.database.user_repository import Language, User, UserRepository
@@ -103,7 +105,6 @@ class TextToImagePage(QWidget, WorkerMixin):
         message = message.replace("%1", path).replace("%2", str(int(duration)))
         conn = get_connection()
         with TransactionManager(conn) as tm:
-
             operation_repo = OperationRepository(conn)
             operation_repo.log_operation(
                 self.user.id, "EMBED", "SUCCESS", duration_ms=duration
@@ -551,3 +552,156 @@ class SettingsPage(QWidget):
             QMessageBox.information(self, tr("Settings"), tr("Saved."))
         except Exception as e:
             QMessageBox.critical(self, tr("Error"), str(e))
+
+
+class HistoryPage(QWidget, WorkerMixin):
+    def __init__(self):
+        super().__init__()
+        self.user = None
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(32, 24, 32, 24)
+        lay.setSpacing(10)
+
+        header = QHBoxLayout()
+        self.title = QLabel()
+        self.title.setObjectName("pageTitle")
+        header.addWidget(self.title)
+        header.addStretch()
+
+        self.btn_refresh = QPushButton()
+        self.btn_refresh.setFixedWidth(120)
+        self.btn_refresh.clicked.connect(self.reload)
+        header.addWidget(self.btn_refresh)
+
+        lay.addLayout(header)
+        lay.addSpacing(10)
+
+        self.tabs = QTabWidget()
+
+        self.operations_table = QTableWidget()
+        self.operations_table.setColumnCount(5)
+        self.operations_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.operations_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.operations_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.operations_table.verticalHeader().setVisible(False)
+
+        self.images_table = QTableWidget()
+        self.images_table.setColumnCount(7)
+        self.images_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.images_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.images_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.images_table.verticalHeader().setVisible(False)
+
+        self.tabs.addTab(self.operations_table, "")
+        self.tabs.addTab(self.images_table, "")
+
+        lay.addWidget(self.tabs)
+
+        self.retranslate()
+
+    def retranslate(self):
+        self.title.setText(tr("History"))
+        self.btn_refresh.setText(tr("Refresh"))
+        self.tabs.setTabText(0, tr("Operations"))
+        self.tabs.setTabText(1, tr("Images"))
+
+        self.operations_table.setHorizontalHeaderLabels([
+            tr("Date"), tr("Type"), tr("Status"), tr("Duration (ms)"), tr("Error"),
+        ])
+        self.images_table.setHorizontalHeaderLabels([
+            tr("Date"), tr("File"), tr("Path"), tr("Format"), tr("Channels"),
+            tr("Size"), tr("Stego"), tr("Hash"),
+        ])
+
+    def set_user(self, user):
+        self.user = user
+        self.reload()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self.user:
+            self.reload()
+
+    def reload(self):
+        if not self.user:
+            return
+        self.btn_refresh.setEnabled(False)
+        self.run_async(
+            func=self._fetch_history,
+            on_success=self._on_loaded,
+            on_error=self._on_load_error,
+        )
+
+    def _fetch_history(self):
+
+        conn = get_connection()
+        try:
+            operations = OperationRepository(conn).list_by_user(self.user.id)
+            images = ImageRepository(conn).list_by_owner(self.user.id)
+            return operations, images
+        except Exception as e:
+            print(e)
+            return None, None
+
+    def _on_loaded(self, result, duration):
+        operations, images = result
+        self._fill_operations(operations)
+        self._fill_images(images)
+        self.btn_refresh.setEnabled(True)
+
+    def _on_load_error(self, error_msg, duration):
+        self.btn_refresh.setEnabled(True)
+        QMessageBox.critical(self, tr("Error"), error_msg)
+
+    def _fill_operations(self, rows):
+        self.operations_table.setRowCount(len(rows))
+        for i, operation in enumerate(rows):
+            status_item = QTableWidgetItem(operation.status)
+            if operation.status == "FAILED":
+                status_item.setForeground(Qt.GlobalColor.red)
+            else:
+                status_item.setForeground(Qt.GlobalColor.darkGreen)
+
+            self.operations_table.setItem(i, 0, QTableWidgetItem(operation.created_at))
+            self.operations_table.setItem(i, 1, QTableWidgetItem(operation.operation_type))
+            self.operations_table.setItem(i, 2, status_item)
+            self.operations_table.setItem(
+                i, 3,
+                QTableWidgetItem(
+                    str(operation.duration_ms) if operation.duration_ms is not None else "—")
+            )
+            self.operations_table.setItem(
+                i, 4, QTableWidgetItem(operation.error_message or "—")
+            )
+
+    def _fill_images(self, rows: list[Image]):
+        self.images_table.setRowCount(len(rows))
+        for i, img in enumerate(rows):
+            name = Path(img.file_path).name
+            size = self._format_size(img.file_size_bytes)
+            stego = tr("Yes") if img.is_stego else tr("No")
+            hash_short = (img.sha256_hash or "")[:12] + "…"
+
+            self.images_table.setItem(i, 0, QTableWidgetItem(img.created_at))
+            self.images_table.setItem(i, 1, QTableWidgetItem(name))
+            self.images_table.setItem(i, 2, QTableWidgetItem(img.file_path))
+            self.images_table.setItem(i, 3, QTableWidgetItem(img.image_format))
+            self.images_table.setItem(i, 4, QTableWidgetItem(img.channels_mask or "—"))
+            self.images_table.setItem(i, 5, QTableWidgetItem(size))
+            self.images_table.setItem(i, 6, QTableWidgetItem(stego))
+            self.images_table.setItem(i, 7, QTableWidgetItem(hash_short))
+
+    @staticmethod
+    def _format_size(size_bytes: int) -> str:
+        if size_bytes is None:
+            return "—"
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        if size_bytes < 1024 ** 2:
+            return f"{size_bytes / 1024:.1f} KB"
+        return f"{size_bytes / 1024 ** 2:.1f} MB"

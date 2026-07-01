@@ -78,6 +78,7 @@ class PackTextToImageInteractor:
                 owner_user_id=user_id,
                 file_path=str(path_to_save),
                 image_format="PNG",
+                channels_mask="RGB",
                 file_size_bytes=result.size,
                 sha256_hash=result.sha256,
                 width_px=result.width,

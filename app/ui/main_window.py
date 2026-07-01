@@ -8,7 +8,7 @@ from app.ui.auth import AuthWindow
 from app.ui.locale import install_language, tr
 from app.ui.pages import (
     TextToImagePage, ImageToTextPage,
-    StegoEncodePage, StegoDecodePage, SettingsPage,
+    StegoEncodePage, StegoDecodePage, SettingsPage, HistoryPage,
 )
 
 
@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
         self.page_text_decode = ImageToTextPage()
         self.page_stego_encode = StegoEncodePage()
         self.page_stego_decode = StegoDecodePage()
+        self.page_history = HistoryPage()
         self.page_settings = SettingsPage()
         self.page_settings.language_changed.connect(self._apply_language)
 
@@ -65,6 +66,7 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self.page_text_decode)
         self.pages.addWidget(self.page_stego_encode)
         self.pages.addWidget(self.page_stego_decode)
+        self.pages.addWidget(self.page_history)
         self.pages.addWidget(self.page_settings)
 
         self._nav_sources = [
@@ -72,6 +74,7 @@ class MainWindow(QMainWindow):
             "Image to Text",
             "Steganography → Encode",
             "Steganography → Decode",
+            "History",
             "Settings",
         ]
         self.nav_buttons = []
@@ -128,6 +131,7 @@ class MainWindow(QMainWindow):
         self.page_text_encode.set_user(user)
         self.page_stego_decode.set_user(user)
         self.page_stego_encode.set_user(user)
+        self.page_history.set_user(user)
         self._apply_language(user.preferred_lang_code)
         self.stack.setCurrentIndex(1)
         self._go(0)
