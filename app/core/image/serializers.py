@@ -126,7 +126,7 @@ class LSBSerializer:
 
         format_id = reader.read(LSBFormat.FORMAT_ID_SIZE)
         if format_id != LSBFormat.FORMAT_ID:
-            raise NotOurImageFormatError(f"Invalid LSB format id - {format_id.decode('utf-8')}")
+            raise NotOurImageFormatError(f"Invalid LSB format id - {format_id}")
 
         channels_mask = reader.read_int(LSBFormat.CHANNELS_MASK_SIZE)
         bits_r = reader.read_int(LSBFormat.BITS_SIZE)
