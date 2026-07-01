@@ -1,12 +1,8 @@
+import sqlite3
 from dataclasses import dataclass
 from typing import Optional
 
-try:
-    from .connection import db_cursor
-    from .exceptions import RecordNotFoundError
-except ImportError:
-    from connection import db_cursor
-    from exceptions import RecordNotFoundError
+from app.database.exceptions import RecordNotFoundError
 
 
 @dataclass
@@ -45,6 +41,9 @@ class Image:
 
 
 class ImageRepository:
+    def __init__(self, connection: sqlite3.Connection):
+        self.connection = connection
+
     def create_image(
         self,
         owner_user_id: int,
@@ -59,35 +58,35 @@ class ImageRepository:
         is_stego: bool = False,
         source_image_id: Optional[int] = None,
     ) -> int:
-        with db_cursor(commit=True) as cur:
-            cur.execute(
-                """
-                INSERT INTO images (
-                    owner_user_id, source_image_id, file_path, original_name,
-                    image_format, channels_mask, width_px, height_px, file_size_bytes,
-                    sha256_hash, is_stego
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    owner_user_id, source_image_id, file_path, original_name,
-                    image_format, channels_mask, width_px, height_px, file_size_bytes,
-                    sha256_hash, int(is_stego),
-                ),
-            )
-            return cur.lastrowid
+        cur = self.connection.cursor()
+        cur.execute(
+            """
+            INSERT INTO images (
+                owner_user_id, source_image_id, file_path, original_name,
+                image_format, channels_mask, width_px, height_px,
+                file_size_bytes, sha256_hash, is_stego
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                owner_user_id, source_image_id, file_path, original_name,
+                image_format, channels_mask, width_px, height_px,
+                file_size_bytes, sha256_hash, int(is_stego),
+            ),
+        )
+        return cur.lastrowid
 
     def get_by_id(self, image_id: int) -> Image:
-        with db_cursor() as cur:
-            cur.execute("SELECT * FROM images WHERE id = ?", (image_id,))
-            row = cur.fetchone()
-            if row is None:
-                raise RecordNotFoundError(f"image id={image_id} ვერ მოიძებნა")
-            return Image.from_row(row)
+        cur = self.connection.cursor()
+        cur.execute("SELECT * FROM images WHERE id = ?", (image_id,))
+        row = cur.fetchone()
+        if row is None:
+            raise RecordNotFoundError(f"image id={image_id} ვერ მოიძებნა")
+        return Image.from_row(row)
 
     def list_by_owner(self, owner_user_id: int) -> list[Image]:
-        with db_cursor() as cur:
-            cur.execute(
-                "SELECT * FROM images WHERE owner_user_id = ? ORDER BY created_at DESC",
-                (owner_user_id,),
-            )
-            return [Image.from_row(row) for row in cur.fetchall()]
+        cur = self.connection.cursor()
+        cur.execute(
+            "SELECT * FROM images WHERE owner_user_id = ? ORDER BY created_at DESC",
+            (owner_user_id,),
+        )
+        return [Image.from_row(row) for row in cur.fetchall()]
