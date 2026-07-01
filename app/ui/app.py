@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from PyQt6.QtWidgets import QApplication, QStyle
@@ -5,6 +6,11 @@ from PyQt6.QtWidgets import QApplication, QStyle
 from app.ui.main_window import MainWindow
 from app.ui.services import ensure_database
 from app.ui.styles import APP_STYLE
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+)
 
 
 def main():
