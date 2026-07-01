@@ -10,7 +10,7 @@ class Operation:
     operation_type: str
     status: str
     error_message: Optional[str]
-    duration_ms: Optional[int]
+    duration_ms: Optional[float]
     created_at: str
 
     @staticmethod

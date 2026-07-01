@@ -1,15 +1,16 @@
 from pathlib import Path
 
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPlainTextEdit, QPushButton,
     QFormLayout, QComboBox, QMessageBox, QLineEdit, QHBoxLayout, QTableWidgetItem, QHeaderView,
-    QTableWidget, QTabWidget
+    QTableWidget, QTabWidget, QMenu, QApplication, QAbstractItemView
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
 from app.database.connection import get_connection
 from app.database.image_repository import ImageRepository, Image
-from app.database.operation_repository import OperationRepository
+from app.database.operation_repository import OperationRepository, Operation
 from app.database.transaction_manager import TransactionManager
 from app.database.user_repository import Language, User, UserRepository
 from app.ui.locale import tr
@@ -554,6 +555,61 @@ class SettingsPage(QWidget):
             QMessageBox.critical(self, tr("Error"), str(e))
 
 
+def make_history_table(column_count: int) -> QTableWidget:
+    table = QTableWidget()
+    table.setColumnCount(column_count)
+    table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+    table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+    table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+    table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+    table.horizontalHeader().setStretchLastSection(True)
+    table.verticalHeader().setVisible(False)
+    table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+    return table
+
+
+def add_copy_support(table: QTableWidget):
+    def copy_selection():
+        selected = table.selectedItems()
+        if not selected:
+            return
+        if len(selected) == 1:
+            QApplication.clipboard().setText(selected[0].text())
+            return
+        rows = sorted(set(item.row() for item in selected))
+        cols = sorted(set(item.column() for item in selected))
+        lines = []
+        for r in rows:
+            line = []
+            for c in cols:
+                item = table.item(r, c)
+                line.append(item.text() if item else "")
+            lines.append("\t".join(line))
+        QApplication.clipboard().setText("\n".join(lines))
+
+    def show_context_menu(pos):
+        if not table.selectedItems():
+            return
+        menu = QMenu(table)
+        copy_action = QAction(tr("Copy"), table)
+        copy_action.triggered.connect(copy_selection)
+        menu.addAction(copy_action)
+        menu.exec(table.viewport().mapToGlobal(pos))
+
+    table.customContextMenuRequested.connect(show_context_menu)
+
+    copy_action = QAction(table)
+    copy_action.setShortcut("Ctrl+C")
+    copy_action.triggered.connect(copy_selection)
+    table.addAction(copy_action)
+
+
+def set_item(table: QTableWidget, row: int, col: int, text: str):
+    item = QTableWidgetItem(text)
+    item.setToolTip(text)
+    table.setItem(row, col, item)
+
+
 class HistoryPage(QWidget, WorkerMixin):
     def __init__(self):
         super().__init__()
@@ -579,23 +635,11 @@ class HistoryPage(QWidget, WorkerMixin):
 
         self.tabs = QTabWidget()
 
-        self.operations_table = QTableWidget()
-        self.operations_table.setColumnCount(5)
-        self.operations_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.operations_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.operations_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
-        self.operations_table.verticalHeader().setVisible(False)
+        self.operations_table = make_history_table(5)
+        add_copy_support(self.operations_table)
 
-        self.images_table = QTableWidget()
-        self.images_table.setColumnCount(7)
-        self.images_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.images_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.images_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
-        self.images_table.verticalHeader().setVisible(False)
+        self.images_table = make_history_table(8)
+        add_copy_support(self.images_table)
 
         self.tabs.addTab(self.operations_table, "")
         self.tabs.addTab(self.images_table, "")
@@ -603,6 +647,16 @@ class HistoryPage(QWidget, WorkerMixin):
         lay.addWidget(self.tabs)
 
         self.retranslate()
+        self._configure_column_widths()
+
+    def _configure_column_widths(self):
+        op_widths = [140, 90, 90, 100, 250]
+        for i, w in enumerate(op_widths):
+            self.operations_table.setColumnWidth(i, w)
+
+        img_widths = [140, 160, 280, 70, 90, 90, 60, 140]
+        for i, w in enumerate(img_widths):
+            self.images_table.setColumnWidth(i, w)
 
     def retranslate(self):
         self.title.setText(tr("History"))
@@ -638,7 +692,6 @@ class HistoryPage(QWidget, WorkerMixin):
         )
 
     def _fetch_history(self):
-
         conn = get_connection()
         try:
             operations = OperationRepository(conn).list_by_user(self.user.id)
@@ -658,46 +711,44 @@ class HistoryPage(QWidget, WorkerMixin):
         self.btn_refresh.setEnabled(True)
         QMessageBox.critical(self, tr("Error"), error_msg)
 
-    def _fill_operations(self, rows):
+    def _fill_operations(self, rows: list[Operation]):
         self.operations_table.setRowCount(len(rows))
         for i, operation in enumerate(rows):
             status_item = QTableWidgetItem(operation.status)
+            status_item.setToolTip(operation.status)
             if operation.status == "FAILED":
                 status_item.setForeground(Qt.GlobalColor.red)
             else:
                 status_item.setForeground(Qt.GlobalColor.darkGreen)
 
-            self.operations_table.setItem(i, 0, QTableWidgetItem(operation.created_at))
-            self.operations_table.setItem(i, 1, QTableWidgetItem(operation.operation_type))
+            set_item(self.operations_table, i, 0, operation.created_at)
+            set_item(self.operations_table, i, 1, operation.operation_type)
             self.operations_table.setItem(i, 2, status_item)
-            self.operations_table.setItem(
-                i, 3,
-                QTableWidgetItem(
-                    str(operation.duration_ms) if operation.duration_ms is not None else "—")
+            set_item(
+                self.operations_table, i, 3,
+                str(round(operation.duration_ms, 1)) if operation.duration_ms is not None else "—"
             )
-            self.operations_table.setItem(
-                i, 4, QTableWidgetItem(operation.error_message or "—")
-            )
+            set_item(self.operations_table, i, 4, operation.error_message or "—")
 
-    def _fill_images(self, rows: list[Image]):
+    def _fill_images(self, rows):
         self.images_table.setRowCount(len(rows))
         for i, img in enumerate(rows):
             name = Path(img.file_path).name
             size = self._format_size(img.file_size_bytes)
             stego = tr("Yes") if img.is_stego else tr("No")
-            hash_short = (img.sha256_hash or "")[:12] + "…"
+            full_hash = img.sha256_hash or ""
 
-            self.images_table.setItem(i, 0, QTableWidgetItem(img.created_at))
-            self.images_table.setItem(i, 1, QTableWidgetItem(name))
-            self.images_table.setItem(i, 2, QTableWidgetItem(img.file_path))
-            self.images_table.setItem(i, 3, QTableWidgetItem(img.image_format))
-            self.images_table.setItem(i, 4, QTableWidgetItem(img.channels_mask or "—"))
-            self.images_table.setItem(i, 5, QTableWidgetItem(size))
-            self.images_table.setItem(i, 6, QTableWidgetItem(stego))
-            self.images_table.setItem(i, 7, QTableWidgetItem(hash_short))
+            set_item(self.images_table, i, 0, img.created_at)
+            set_item(self.images_table, i, 1, name)
+            set_item(self.images_table, i, 2, img.file_path)
+            set_item(self.images_table, i, 3, img.image_format)
+            set_item(self.images_table, i, 4, img.channels_mask or "—")
+            set_item(self.images_table, i, 5, size)
+            set_item(self.images_table, i, 6, stego)
+            set_item(self.images_table, i, 7, full_hash)
 
     @staticmethod
-    def _format_size(size_bytes: int) -> str:
+    def _format_size(size_bytes: int | None) -> str:
         if size_bytes is None:
             return "—"
         if size_bytes < 1024:
