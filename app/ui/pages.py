@@ -88,7 +88,6 @@ class TextToImagePage(QWidget, WorkerMixin):
 
         self.btn.setEnabled(False)
         opts = self.settings.values()
-        print(opts)
 
         self._current_thread = self.run_async(
             func=rgb_pack_interactor().execute,
@@ -199,7 +198,6 @@ class ImageToTextPage(QWidget, WorkerMixin):
             return
 
         pwd = self.password.text() or None
-        print(pwd)
         interactor = rgb_unpack_interactor()
 
         def job():
@@ -212,7 +210,6 @@ class ImageToTextPage(QWidget, WorkerMixin):
         )
 
     def _on_success(self, result, duration):
-        print(result)
         self.btn.setEnabled(True)
         conn = get_connection()
         with TransactionManager(conn) as tm:
@@ -292,7 +289,7 @@ class StegoEncodePage(QWidget, WorkerMixin):
         self.retranslate()
 
     def retranslate(self):
-        self.title.setText(tr("Steganography — Encode"))
+        self.title.setText(tr("Steganography → Encode"))
         self.lbl_text.setText(tr("Text:"))
         self.text.setPlaceholderText(tr("Enter text..."))
         self.lbl_cover.setText(tr("Cover image:"))
@@ -417,7 +414,7 @@ class StegoDecodePage(QWidget, WorkerMixin):
         self.retranslate()
 
     def retranslate(self):
-        self.title.setText(tr("Steganography — Decode"))
+        self.title.setText(tr("Steganography → Decode"))
         self.lbl_image.setText(tr("Image:"))
         self.image.retranslate()
         self.lbl_password.setText(tr("Password:"))
@@ -436,7 +433,6 @@ class StegoDecodePage(QWidget, WorkerMixin):
             return
 
         pwd = self.password.text() or None
-        print(pwd)
         self.btn.setEnabled(False)
 
         def job():

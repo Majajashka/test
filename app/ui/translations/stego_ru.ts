@@ -23,8 +23,6 @@
     <message><source>Steganography → Encode</source><translation>Стеганография → Запись</translation></message>
     <message><source>Steganography → Decode</source><translation>Стеганография → Чтение</translation></message>
     <message><source>Settings</source><translation>Настройки</translation></message>
-    <message><source>Steganography → Encode</source><translation>Стеганография → Запись</translation></message>
-    <message><source>Steganography → Decode</source><translation>Стеганография → Чтение</translation></message>
     <message><source>Text:</source><translation>Текст:</translation></message>
     <message><source>Image:</source><translation>Изображение:</translation></message>
     <message><source>Password:</source><translation>Пароль:</translation></message>
@@ -62,5 +60,20 @@
     <message><source>Russian</source><translation>Русский</translation></message>
     <message><source>English</source><translation>English</translation></message>
     <message><source>Georgian</source><translation>ქართული</translation></message>
+    <message><source>History</source><translation>История</translation></message>
+    <message><source>Refresh</source><translation>Обновить</translation></message>
+    <message><source>Operations</source><translation>Операции</translation></message>
+    <message><source>Images</source><translation>Изображения</translation></message>
+    <message><source>Date</source><translation>Дата</translation></message>
+    <message><source>Type</source><translation>Тип</translation></message>
+    <message><source>Status</source><translation>Статус</translation></message>
+    <message><source>Duration (ms)</source><translation>Длительность (мс)</translation></message>
+    <message><source>File</source><translation>Файл</translation></message>
+    <message><source>Path</source><translation>Путь</translation></message>
+    <message><source>Format</source><translation>Формат</translation></message>
+    <message><source>Channels</source><translation>Каналы</translation></message>
+    <message><source>Size</source><translation>Размер</translation></message>
+    <message><source>Stego</source><translation>Stego</translation></message>
+    <message><source>Hash</source><translation>Хэш</translation></message>
 </context>
 </TS>

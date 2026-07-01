@@ -23,8 +23,6 @@
     <message><source>Steganography → Encode</source><translation>სტეგანოგრაფია → ჩაწერა</translation></message>
     <message><source>Steganography → Decode</source><translation>სტეგანოგრაფია → წაკითხვა</translation></message>
     <message><source>Settings</source><translation>პარამეტრები</translation></message>
-    <message><source>Steganography → Encode</source><translation>სტეგანოგრაფია → ჩაწერა</translation></message>
-    <message><source>Steganography → Decode</source><translation>სტეგანოგრაფია → წაკითხვა</translation></message>
     <message><source>Text:</source><translation>ტექსტი:</translation></message>
     <message><source>Image:</source><translation>სურათი:</translation></message>
     <message><source>Password:</source><translation>პაროლი:</translation></message>
@@ -62,5 +60,20 @@
     <message><source>Russian</source><translation>Русский</translation></message>
     <message><source>English</source><translation>English</translation></message>
     <message><source>Georgian</source><translation>ქართული</translation></message>
+    <message><source>History</source><translation>ისტორია</translation></message>
+    <message><source>Refresh</source><translation>განახლება</translation></message>
+    <message><source>Operations</source><translation>ოპერაცია</translation></message>
+    <message><source>Images</source><translation>გამოსახულება</translation></message>
+    <message><source>Date</source><translation>თარიღი</translation></message>
+    <message><source>Type</source><translation>ტიპი</translation></message>
+    <message><source>Status</source><translation>სტატუსი</translation></message>
+    <message><source>Duration (ms)</source><translation>ხანგრძლივობა (ms)</translation></message>
+    <message><source>File</source><translation>ფაილი</translation></message>
+    <message><source>Path</source><translation>გზა</translation></message>
+    <message><source>Format</source><translation>ფორმატი</translation></message>
+    <message><source>Channels</source><translation>არხები</translation></message>
+    <message><source>Size</source><translation>სიდიდე</translation></message>
+    <message><source>Stego</source><translation>Stego</translation></message>
+    <message><source>Hash</source><translation>Hash</translation></message>
 </context>
 </TS>

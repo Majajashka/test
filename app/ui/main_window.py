@@ -122,6 +122,7 @@ class MainWindow(QMainWindow):
         self.page_stego_encode.retranslate()
         self.page_stego_decode.retranslate()
         self.page_settings.retranslate()
+        self.page_history.retranslate()
 
     def _enter_app(self, user: User):
         self._user = user
