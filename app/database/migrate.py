@@ -14,7 +14,7 @@ SCHEMA_FILES = [
 SEED_FILE = "seed_data.sql"
 
 
-def run_migrations(with_seed_data: bool = True) -> None:
+def run_migrations(with_seed_data: bool = True, close_con: bool = True) -> None:
     conn = get_connection()
     try:
         for filename in SCHEMA_FILES:
@@ -27,7 +27,8 @@ def run_migrations(with_seed_data: bool = True) -> None:
 
         conn.commit()
     finally:
-        conn.close()
+        if close_con:
+            conn.close()
 
 
 if __name__ == "__main__":

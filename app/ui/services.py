@@ -23,7 +23,7 @@ LSB_CONFIG = LSBConfig(red_bits=1, green_bits=1, blue_bits=1)
 
 def ensure_database():
     if not DB_PATH.exists():
-        run_migrations(with_seed_data=True)
+        run_migrations(with_seed_data=True, close_con=False)
 
 
 def rgb_pack_interactor(conn: Connection | None = None) -> PackTextToImageInteractor:
