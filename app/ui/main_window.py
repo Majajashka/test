@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.stack)
 
-        install_language(Language.RU)
+        install_language(Language.EN)
         self.auth.retranslate()
 
     def _build_app(self):
