@@ -4,6 +4,7 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
 try:
@@ -16,6 +17,12 @@ except ImportError:
 PBKDF2_ITERATIONS = 200_000
 
 
+class Language(Enum):
+    EN = "en"
+    KA = "ka"
+    RU = "ru"
+
+
 @dataclass
 class User:
     id: int
@@ -23,7 +30,7 @@ class User:
     password_hash: str
     password_algo: str
     password_salt: Optional[str]
-    preferred_lang_code: str
+    preferred_lang_code: Language
     is_active: bool
     created_at: str
     last_login_at: Optional[str]
@@ -36,7 +43,7 @@ class User:
             password_hash=row["password_hash"],
             password_algo=row["password_algo"],
             password_salt=row["password_salt"],
-            preferred_lang_code=row["preferred_lang_code"],
+            preferred_lang_code=Language(row["preferred_lang_code"]),
             is_active=bool(row["is_active"]),
             created_at=row["created_at"],
             last_login_at=row["last_login_at"],
@@ -49,7 +56,12 @@ def _hash_password(password: str, salt: bytes) -> str:
 
 
 class UserRepository:
-    def create_user(self, username: str, password: str, preferred_lang_code: str = "ka") -> int:
+    def create_user(
+            self,
+            username: str,
+            password: str,
+            preferred_lang_code: Language = Language.KA
+    ) -> int:
         salt = os.urandom(16)
         salt_hex = salt.hex()
         password_hash = _hash_password(password, salt)
@@ -61,7 +73,7 @@ class UserRepository:
                     INSERT INTO users (username, password_hash, password_algo, password_salt, preferred_lang_code)
                     VALUES (?, ?, ?, ?, ?)
                     """,
-                    (username, password_hash, "pbkdf2_sha256", salt_hex, preferred_lang_code),
+                    (username, password_hash, "pbkdf2_sha256", salt_hex, preferred_lang_code.value),
                 )
                 return cur.lastrowid
         except sqlite3.IntegrityError as exc:
@@ -95,3 +107,10 @@ class UserRepository:
         now = datetime.now(timezone.utc).isoformat(sep=" ", timespec="seconds")
         with db_cursor(commit=True) as cur:
             cur.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now, user_id))
+
+    def change_language(self, user_id: int, preferred_lang_code: Language) -> None:
+        with db_cursor(commit=True) as cur:
+            cur.execute(
+                "UPDATE users SET preferred_lang_code = ? WHERE id = ?",
+                (preferred_lang_code.value, user_id)
+            )

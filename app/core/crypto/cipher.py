@@ -63,8 +63,16 @@ class ChaCha20Cipher(Cipher):
 
 
 class XorCipher(Cipher):
+    SIGNATURE = b'XOR_SIGN'
 
     def encrypt(self, data: bytes, key: bytes) -> bytes:
-        return bytes(b ^ key_b for b, key_b in zip(data, cycle(key)))
+        data_to_encrypt = self.SIGNATURE + data
+        return bytes(b ^ key_b for b, key_b in zip(data_to_encrypt, cycle(key)))
 
-    decrypt = encrypt
+    def decrypt(self, data: bytes, key: bytes) -> bytes:
+        decrypted = bytes(b ^ key_b for b, key_b in zip(data, cycle(key)))
+
+        if not decrypted.startswith(self.SIGNATURE):
+            raise WrongPasswordError("Wrong password or invalid file format.")
+
+        return decrypted[len(self.SIGNATURE):]

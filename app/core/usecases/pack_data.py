@@ -5,7 +5,6 @@ from app.core.crypto.cipher import CipherFactory
 from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, ImageData, PayloadMetadata
 from app.core.image.packers.raw_rgb import RGBImagePacker, RGBImageUnpacker
-from app.core.image.reader import ImageWriter, ImageReader
 from app.core.image.serializers import TextToImageSerializator
 
 
@@ -70,7 +69,7 @@ class UnpackImageToTextInteractor:
             cipher_factory: CipherFactory,
             compressor_factory: CompressorFactory,
             password_hasher: PasswordHasher,
-            unpacker: RGBImageUnpacker
+            unpacker: RGBImageUnpacker,
     ):
         self.unpacker = unpacker
         self.serializer = serializer
@@ -91,7 +90,6 @@ class UnpackImageToTextInteractor:
                 data=data,
                 key=self.password_hasher.hash(password)
             )
-
         if image_data.meta.compression != Compression.NONE:
             compressor = self.compressor_factory.get_compressor(image_data.meta.compression)
             data = compressor.decompress(data)

@@ -5,7 +5,6 @@ from app.core.crypto.cipher import CipherFactory
 from app.core.crypto.hasher import PasswordHasher
 from app.core.image.image import Compression, Encryption, LSBImageData, LSBMetadata
 from app.core.image.packers.lsb import LSBImagePacker, LSBImageUnpacker
-from app.core.image.reader import ImageReader
 from app.core.image.serializers import LSBSerializer
 
 
@@ -98,7 +97,6 @@ class UnpackLSBImageToTextInteractor:
                 data=payload,
                 key=self.password_hasher.hash(password),
             )
-
         if image_data.meta.compression != Compression.NONE:
             compressor = self.compressor_factory.get_compressor(image_data.meta.compression)
             payload = compressor.decompress(payload)
