@@ -31,7 +31,8 @@ class ImageReader:
         return self.read_pixels(image_path).tobytes()
 
     def read_pixels(self, image_path: str | Path) -> np.ndarray:
-        image_path = Path(image_path)
+        if isinstance(image_path, str):
+            image_path = Path(image_path)
 
         if not image_path.exists():
             raise FileNotFoundError(
@@ -40,7 +41,12 @@ class ImageReader:
 
         self._check_format(image_path)
 
-        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+        # OpenCV fails to read files with Unicode paths on Windows.
+        # Read the file through NumPy and decode it manually.
+        image = cv2.imdecode(
+            np.fromfile(str(image_path), dtype=np.uint8),
+            cv2.IMREAD_COLOR
+        )
         if image is None:
             raise ValueError(f"Failed to read image: {image_path}")
 

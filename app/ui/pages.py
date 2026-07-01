@@ -325,6 +325,7 @@ class StegoEncodePage(QWidget, WorkerMixin):
                 text=text,
                 source_path=Path(cover),
                 path_to_save=Path(out),
+                user_id=self.user.id,
                 **opts,
             )
             return tr("Saved: %1").replace("%1", out)

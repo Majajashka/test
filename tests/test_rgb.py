@@ -75,7 +75,7 @@ def test_pack_data(
         password=password
     )
 
-    unpacked_text = unpack_interactor.execute(user_id=1,path_to_image=path_to_save,
+    unpacked_text = unpack_interactor.execute(path_to_image=path_to_save,
                                               password=password)
 
     assert text == unpacked_text

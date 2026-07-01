@@ -10,6 +10,9 @@ from app.core.image.packers.lsb import LSBConfig, LSBImagePacker, LSBImageUnpack
 from app.core.image.reader import ImageReader, ImageWriter
 from app.core.image.serializers import LSBSerializer
 from app.core.usecases.pack_lsb import PackTextToLSBImageInteractor, UnpackLSBImageToTextInteractor
+from app.database.connection import get_connection
+from app.database.image_repository import ImageRepository
+from app.database.transaction_manager import TransactionManager
 
 CARRIER_IMAGE = Path(__file__).parent / "test.png"
 LSB_CONFIG = LSBConfig(red_bits=1, green_bits=1, blue_bits=1)
@@ -20,6 +23,8 @@ def pack_interactor() -> PackTextToLSBImageInteractor:
     reader = ImageReader(mode=ChannelsMask.RGB)
     writer = ImageWriter(mode=ChannelsMask.RGB)
     return PackTextToLSBImageInteractor(
+        image_repo=ImageRepository(get_connection()),
+        transaction_manager=TransactionManager(get_connection()),
         serializer=LSBSerializer(),
         packer=LSBImagePacker(reader=reader, writer=writer, config=LSB_CONFIG),
         cipher_factory=CipherFactory(),
@@ -61,8 +66,9 @@ def test_pack_data(
 ) -> None:
     text = "Hello, world! This is a test message to encode into a carrier image. It should be able to decode back to the original text."
     path_to_save = tmp_path / "output_lsb.png"
-
+    user_id = 1
     pack_interactor.execute(
+        user_id=user_id,
         text=text,
         source_path=CARRIER_IMAGE,
         path_to_save=path_to_save,
@@ -84,8 +90,9 @@ def test_edge_texts(
         tmp_path: Path,
 ) -> None:
     path = tmp_path / "out_lsb.png"
-
+    user_id = 1
     pack_interactor.execute(
+        user_id=user_id,
         text=text,
         source_path=CARRIER_IMAGE,
         path_to_save=path,
