@@ -148,7 +148,7 @@ class AuthWindow(QWidget):
     def retranslate(self):
         self.login_user.setPlaceholderText(tr("Username"))
         self.login_pass.setPlaceholderText(tr("Password"))
-        self.login_btn.setText(tr("Sign in button"))
+        self.login_btn.setText(tr("Sign in"))
         self.to_register_btn.setText(tr("Register"))
 
         self.reg_user.setPlaceholderText(tr("Username"))
