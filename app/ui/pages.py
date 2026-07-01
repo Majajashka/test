@@ -674,7 +674,8 @@ class HistoryPage(QWidget, WorkerMixin):
 
     def set_user(self, user):
         self.user = user
-        self.reload()
+        self.operations_table.setRowCount(0)
+        self.images_table.setRowCount(0)
 
     def showEvent(self, event):
         super().showEvent(event)

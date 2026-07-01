@@ -182,7 +182,7 @@ class AuthWindow(QWidget):
             return
         try:
             interactor = create_user_interactor()
-            user = interactor.execute(user, pwd, current_language())
+            interactor.execute(user, pwd, current_language())
             QMessageBox.information(self, tr("Register"), tr("Account created. Please sign in."))
             self.login_user.setText(user)
             self.login_pass.clear()
