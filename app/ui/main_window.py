@@ -135,6 +135,6 @@ class MainWindow(QMainWindow):
     def _logout(self):
         self._user = None
         self.auth.login_pass.clear()
-        install_language(Language.RU)
+        install_language(Language.EN)
         self.auth.retranslate()
         self.stack.setCurrentIndex(0)
