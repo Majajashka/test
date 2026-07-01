@@ -4,11 +4,19 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
-from app.database.exceptions import DuplicateUsernameError, InvalidCredentialsError, RecordNotFoundError
+from app.database.exceptions import DuplicateUsernameError, InvalidCredentialsError, \
+    RecordNotFoundError
 
 PBKDF2_ITERATIONS = 200_000
+
+
+class Language(Enum):
+    EN = "en"
+    RU = "ru"
+    KA = "ka"
 
 
 @dataclass
@@ -18,7 +26,7 @@ class User:
     password_hash: str
     password_algo: str
     password_salt: Optional[str]
-    preferred_lang_code: str
+    preferred_lang_code: Language
     is_active: bool
     created_at: str
     last_login_at: Optional[str]
@@ -47,7 +55,8 @@ class UserRepository:
     def __init__(self, connection: sqlite3.Connection):
         self.connection = connection
 
-    def create_user(self, username: str, password: str, preferred_lang_code: str = "ka") -> int:
+    def create_user(self, username: str, password: str, preferred_lang_code: Language =
+    Language.KA) -> int:
         salt = os.urandom(16)
         password_hash = _hash_password(password, salt)
         try:
@@ -57,7 +66,7 @@ class UserRepository:
                 INSERT INTO users (username, password_hash, password_algo, password_salt, preferred_lang_code)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (username, password_hash, "pbkdf2_sha256", salt.hex(), preferred_lang_code),
+                (username, password_hash, "pbkdf2_sha256", salt.hex(), preferred_lang_code.value),
             )
             return cur.lastrowid
         except sqlite3.IntegrityError as exc:
